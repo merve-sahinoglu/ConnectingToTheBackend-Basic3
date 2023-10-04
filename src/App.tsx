@@ -1,53 +1,20 @@
-import { SetStateAction, useEffect, useRef, useState } from "react";
+import { SetStateAction } from "react";
 import "react-bootstrap";
-import userService, { User, CanceledError } from "./services/user-service";
+import userService, { User } from "./services/user-service";
+import useUsers from "./hooks/useUsers";
 
 function App() {
   // const [category, setCategory] = useState("");
-  const [users, setUsers] = useState<User[]>([]);
-  const [error, setError] = useState("");
-
   // const ref = useRef<HTMLInputElement>(null);
 
-  //afterRender Top level
-  useEffect(() => {
-    //get ->promise->res/err
-    // const fetchUser = async () => {
-    //   try {
-    //     const res = await axios.get<User[]>(
-    //       "https://jsonplaceholder.typicode.com/users"
-    //     );
-    //     setError("");
-    //     setUsers(res.data);
-    //   } catch (error) {
-    //     setError((error as AxiosError).message);
-    //   }
-    // };
-    // fetchUser();
-
-    const { request, cancel } = userService.getAllUsers();
-
-    request
-      .then((res: { data: SetStateAction<User[]> }) => {
-        setError("");
-        setUsers(res.data);
-      })
-      .catch((err: { message: SetStateAction<string> }) => {
-        if (err instanceof CanceledError) return;
-        setError(err.message);
-      });
-
-    return () => cancel();
-    //Side effect
-    // if (ref.current) ref.current.focus();
-  }, []);
+  const { users, error, isLoading, setUsers, setError } = useUsers();
 
   const deleteUser = (user: User) => {
     const originalUsers = [...users];
     setUsers(users.filter((u) => u.id !== user.id));
 
     userService
-      .deleteUser(user.id)
+      .delete(user.id)
       .catch((err: { message: SetStateAction<string> }) => {
         setError(err.message);
         setUsers(originalUsers);
@@ -64,7 +31,7 @@ function App() {
     setUsers([newUser, ...users]);
 
     userService
-      .addUser(newUser)
+      .create(newUser)
       .then((res: { data: User }) => setUsers([res.data, ...users]))
       .catch((err: { message: SetStateAction<string> }) => {
         setError(err.message);
@@ -82,7 +49,7 @@ function App() {
     setUsers(users.map((x) => (x.id == user.id ? updatedUser : x)));
 
     userService
-      .updateUser(updatedUser)
+      .update(updatedUser)
       .then((res: { data: User }) => setUsers([res.data, ...users]))
       .catch((err: { message: SetStateAction<string> }) => {
         setError(err.message);
@@ -93,6 +60,7 @@ function App() {
   return (
     <>
       {error != "" && <p>{error}</p>}
+      {isLoading && <div className="spinner-border"></div>}
       <div>
         {/* <select
           className="form-select"
